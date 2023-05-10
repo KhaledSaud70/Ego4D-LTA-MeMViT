@@ -1,16 +1,18 @@
 """Video models."""
 
 import math
-import random
 from functools import partial
 
 import torch
 import torch.nn as nn
 from ..models.attention import MultiScaleBlock
-from ..utils import round_width  # validate_checkpoint_wrapper_import
+from .video_model_builder import (
+    TransformerBasicHead,
+    round_width,
+)
 from torch.nn.init import trunc_normal_
 
-from . import head_helper, stem_helper
+from . import stem_helper
 from .build import MODEL_REGISTRY
 
 # try:
@@ -27,7 +29,7 @@ class MeMViT(nn.Module):
     https://arxiv.org/abs/2104.11227
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, with_head=True):
         super().__init__()
         # Get parameters.
         self.cfg = cfg
@@ -39,7 +41,7 @@ class MeMViT(nn.Module):
         in_chans = cfg.DATA.INPUT_CHANNEL_NUM[0]
         use_2d_patch = cfg.MVIT.PATCH_2D
         self.patch_stride = cfg.MVIT.PATCH_STRIDE
-        self.enable_detection = cfg.DETECTION.ENABLE
+        # self.enable_detection = cfg.DETECTION.ENABLE
         if use_2d_patch:
             self.patch_stride = [1] + self.patch_stride
         # Prepare output.
@@ -262,24 +264,12 @@ class MeMViT(nn.Module):
         embed_dim = dim_out
         self.norm = norm_layer(embed_dim)
 
-        if self.enable_detection:
-            self.head = head_helper.ResNetRoIHead(
-                dim_in=[embed_dim],
-                num_classes=num_classes,
-                pool_size=[[temporal_size // self.patch_stride[0], 1, 1]],
-                resolution=[[cfg.DETECTION.ROI_XFORM_RESOLUTION] * 2],
-                scale_factor=[cfg.DETECTION.SPATIAL_SCALE_FACTOR],
-                dropout_rate=cfg.MODEL.DROPOUT_RATE,
-                act_func=cfg.MODEL.HEAD_ACT,
-                aligned=cfg.DETECTION.ALIGNED,
-            )
-        else:
-            self.head = head_helper.TransformerBasicHead(
+        if with_head:
+            self.head = TransformerBasicHead(
                 embed_dim,
                 num_classes,
                 dropout_rate=cfg.MODEL.DROPOUT_RATE,
                 act_func=cfg.MODEL.HEAD_ACT,
-                frame_level=cfg.MVIT.FRAME_LEVEL,
             )
         if self.use_abs_pos:
             if self.sep_pos_embed:
@@ -373,36 +363,18 @@ class MeMViT(nn.Module):
 
         x = self.norm(x)
 
-        if self.enable_detection:
-            if self.cls_embed_on:
-                x = x[:, 1:]
-
-            B, _, C = x.shape
-            x = x.transpose(1, 2).reshape(B, C, thw[0], thw[1], thw[2])
-            if self.box_depth > 0:
-                x = self.head([x], bboxes, do_cls=False)
-
-                x = pad_features(B, x, bboxes)
-                for blk in self.box_blocks:
-                    x, thw = blk(x, thw, mem_selections, video_names)
-
-                x = unpad_features(x, bboxes)
-                x = self.head(x, _, do_pool=False)
-            else:
-                x = self.head([x], bboxes)
+        if self.cfg.MVIT.FRAME_LEVEL:
+            # Will pool spatially and do frame-level predictions in head.
+            x = x[:, (1 if self.cls_embed_on else 0) :].reshape(
+                [x.shape[0]] + thw + [x.shape[-1]]
+            )
         else:
-            if self.cfg.MVIT.FRAME_LEVEL:
-                # Will pool spatially and do frame-level predictions in head.
-                x = x[:, (1 if self.cls_embed_on else 0) :].reshape(
-                    [x.shape[0]] + thw + [x.shape[-1]]
-                )
+            if self.cls_embed_on:
+                x = x[:, 0]
             else:
-                if self.cls_embed_on:
-                    x = x[:, 0]
-                else:
-                    x = x.mean(1)
+                x = x.mean(1)
 
-            x = self.head(x)
+        x = self.head(x)
         return x
 
     def clear_memory(self):

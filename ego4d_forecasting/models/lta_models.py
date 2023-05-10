@@ -21,8 +21,8 @@ from functools import reduce
 from operator import mul
 from .head_helper import MultiTaskHead, MultiTaskMViTHead
 from .video_model_builder import SlowFast, _POOL1, MViT
+from .memvit import MeMViT
 from .build import MODEL_REGISTRY
-
 
 
 @MODEL_REGISTRY.register()
@@ -58,6 +58,7 @@ class MultiTaskSlowFast(SlowFast):
         self.head_name = "head"
         self.add_module(self.head_name, head)
 
+
 @MODEL_REGISTRY.register()
 class RecognitionSlowFastRepeatLabels(MultiTaskSlowFast):
     def __init__(self, cfg):
@@ -87,10 +88,9 @@ class RecognitionSlowFastRepeatLabels(MultiTaskSlowFast):
 
 @MODEL_REGISTRY.register()
 class MultiTaskMViT(MViT):
-
     def __init__(self, cfg):
 
-        super().__init__(cfg, with_head =False)
+        super().__init__(cfg, with_head=False)
 
         self.head = MultiTaskMViTHead(
             [768],
@@ -99,7 +99,9 @@ class MultiTaskMViT(MViT):
             act_func=cfg.MODEL.HEAD_ACT,
         )
 
-#--------------------------------------------------------------------#
+
+# --------------------------------------------------------------------#
+
 
 @MODEL_REGISTRY.register()
 class ConcatAggregator(nn.Module):
@@ -108,13 +110,14 @@ class ConcatAggregator(nn.Module):
         self.cfg = cfg
 
     def forward(self, x):
-        x = torch.stack(x, dim=1) # (B, num_input_clips, D)
-        x = x.view(x.shape[0], -1) # (B, num_input_clips * D)
+        x = torch.stack(x, dim=1)  # (B, num_input_clips, D)
+        x = x.view(x.shape[0], -1)  # (B, num_input_clips * D)
         return x
 
     @staticmethod
     def out_dim(cfg):
         return cfg.MODEL.MULTI_INPUT_FEATURES * cfg.FORECASTING.NUM_INPUT_CLIPS
+
 
 @MODEL_REGISTRY.register()
 class MeanAggregator(nn.Module):
@@ -123,13 +126,14 @@ class MeanAggregator(nn.Module):
         self.cfg = cfg
 
     def forward(self, x):
-        x = torch.stack(x, dim=1) # (B, num_input_clips, D)
+        x = torch.stack(x, dim=1)  # (B, num_input_clips, D)
         x = x.mean(1)
         return x
 
     @staticmethod
     def out_dim(cfg):
         return cfg.MODEL.MULTI_INPUT_FEATURES
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=1000):
@@ -149,6 +153,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[: x.size(0), :, :]
         return self.dropout(x)
 
+
 @MODEL_REGISTRY.register()
 class TransformerAggregator(nn.Module):
     def __init__(self, cfg):
@@ -166,17 +171,19 @@ class TransformerAggregator(nn.Module):
         self.pos_encoder = PositionalEncoding(dim_in, dropout=0.2)
 
     def forward(self, x):
-        x = torch.stack(x, dim=1) # (B, num_inputs, D)
-        x = x.transpose(0, 1) # (num_inputs, B, D)
+        x = torch.stack(x, dim=1)  # (B, num_inputs, D)
+        x = x.transpose(0, 1)  # (num_inputs, B, D)
         x = self.pos_encoder(x)
-        x = self.encoder(x) # (num_inputs, B, D)
-        return x[-1] # (B, D) return last timestep's encoding
+        x = self.encoder(x)  # (num_inputs, B, D)
+        return x[-1]  # (B, D) return last timestep's encoding
 
     @staticmethod
     def out_dim(cfg):
-        return cfg.MODEL.MULTI_INPUT_FEATURES 
+        return cfg.MODEL.MULTI_INPUT_FEATURES
 
-#--------------------------------------------------------------------#
+
+# --------------------------------------------------------------------#
+
 
 @MODEL_REGISTRY.register()
 class MultiHeadDecoder(nn.Module):
@@ -199,11 +206,15 @@ class MultiHeadDecoder(nn.Module):
 
     def forward(self, x, tgts=None):
         x = x.view(x.shape[0], -1, 1, 1, 1)
-        x = torch.stack(self.head([x]), dim=1) # (B, Z, #verbs + #nouns)
-        x = torch.split(x, self.cfg.MODEL.NUM_CLASSES, dim=-1) # [(B, Z, #verbs), (B, Z, #nouns)]
+        x = torch.stack(self.head([x]), dim=1)  # (B, Z, #verbs + #nouns)
+        x = torch.split(
+            x, self.cfg.MODEL.NUM_CLASSES, dim=-1
+        )  # [(B, Z, #verbs), (B, Z, #nouns)]
         return x
 
-#--------------------------------------------------------------------#
+
+# --------------------------------------------------------------------#
+
 
 @MODEL_REGISTRY.register()
 class ForecastingEncoderDecoder(nn.Module):
@@ -224,9 +235,10 @@ class ForecastingEncoderDecoder(nn.Module):
         backbone_config.MODEL.NUM_CLASSES = [cfg.MODEL.MULTI_INPUT_FEATURES]
         backbone_config.MODEL.HEAD_ACT = None
 
-
         if cfg.MODEL.ARCH == "mvit":
             self.backbone = MViT(backbone_config, with_head=True)
+        elif cfg.MODEL.ARCH == "memvit":
+            self.backbone = MeMViT(backbone_config, with_head=True)
         else:
             self.backbone = SlowFast(backbone_config, with_head=True)
         # replace with:
@@ -240,9 +252,10 @@ class ForecastingEncoderDecoder(nn.Module):
             for param in self.backbone.head.parameters():
                 param.requires_grad = True
 
-
     def build_clip_aggregator(self):
-        self.clip_aggregator = MODEL_REGISTRY.get(self.cfg.FORECASTING.AGGREGATOR)(self.cfg)
+        self.clip_aggregator = MODEL_REGISTRY.get(self.cfg.FORECASTING.AGGREGATOR)(
+            self.cfg
+        )
 
     def build_decoder(self):
         self.decoder = MODEL_REGISTRY.get(self.cfg.FORECASTING.DECODER)(self.cfg)
@@ -287,10 +300,10 @@ class ForecastingEncoderDecoder(nn.Module):
         x = self.forward(x)
         results = []
         for head_x in x:
-            if k>1:
+            if k > 1:
                 preds_dist = Categorical(logits=head_x)
                 preds = [preds_dist.sample() for _ in range(k)]
-            elif k==1:
+            elif k == 1:
                 preds = [head_x.argmax(2)]
             head_x = torch.stack(preds, dim=1)
             results.append(head_x)

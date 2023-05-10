@@ -210,6 +210,7 @@ class ResNetBasicHead(nn.Module):
         x = x.view(x.shape[0], -1)
         return x
 
+
 # For LTA models. One head per future action prediction
 class MultiTaskHead(nn.Module):
     def __init__(
