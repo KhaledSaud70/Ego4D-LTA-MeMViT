@@ -1,6 +1,8 @@
 """Video models."""
 
 import math
+import operator
+from functools import reduce
 from functools import partial
 
 import torch
@@ -88,7 +90,8 @@ class MeMViT(nn.Module):
             self.input_dims[i] // self.patch_stride[i]
             for i in range(len(self.input_dims))
         ]
-        num_patches = math.prod(self.patch_dims)
+        # num_patches = math.prod(self.patch_dims)
+        num_patches = reduce(operator.mul, self.patch_dims)
 
         dpr = [
             x.item() for x in torch.linspace(0, drop_path_rate, depth)
