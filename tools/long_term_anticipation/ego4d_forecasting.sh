@@ -24,8 +24,8 @@ function run(){
 WORK_DIR=$1
 mkdir -p ${WORK_DIR}
 
-EGO4D_ANNOTS=$PWD/data/long_term_anticipation/annotations/
-EGO4D_VIDEOS=$PWD/data/long_term_anticipation/clips/
+EGO4D_ANNOTS=$PWD/data/annotations/
+EGO4D_VIDEOS=$PWD/data/clips/
 CLUSTER_ARGS="--on_cluster NUM_GPUS 8"
 
 # # SlowFast-Transformer
@@ -66,5 +66,5 @@ run memvit_concat \
     DATA.CHECKPOINT_MODULE_FILE_PATH ${BACKBONE_WTS}
 
 # Debug locally using a smaller batch size / fewer GPUs
-CLUSTER_ARGS="NUM_GPUS 1 TRAIN.BATCH_SIZE 8 TEST.BATCH_SIZE 32"
+CLUSTER_ARGS="NUM_GPUS 2 TRAIN.BATCH_SIZE 8 TEST.BATCH_SIZE 32"
 

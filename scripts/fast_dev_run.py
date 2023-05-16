@@ -214,8 +214,8 @@ def main(cfg):
         args = {"logger": False, "callbacks": checkpoint_callback}
 
     trainer = Trainer(
-        # gpus=cfg.NUM_GPUS,
-        # num_nodes=cfg.NUM_SHARDS,
+        gpus=cfg.NUM_GPUS,
+        num_nodes=cfg.NUM_SHARDS,
         accelerator=cfg.SOLVER.ACCELERATOR,
         max_epochs=2,
         num_sanity_val_steps=0,
@@ -225,8 +225,6 @@ def main(cfg):
         fast_dev_run=False,
         default_root_dir=cfg.OUTPUT_DIR,
         plugins=DDPPlugin(find_unused_parameters=False),
-        limit_train_batches=0.01,
-        limit_val_batches=0.01,
         **args,
     )
 
