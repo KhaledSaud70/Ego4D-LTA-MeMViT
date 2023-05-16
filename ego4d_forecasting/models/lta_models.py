@@ -261,7 +261,7 @@ class ForecastingEncoderDecoder(nn.Module):
         self.decoder = MODEL_REGISTRY.get(self.cfg.FORECASTING.DECODER)(self.cfg)
 
     # input = [(B, num_inp, 3, T, H, W), (B, num_inp, 3, T', H, W)]
-    def encode_clips(self, x):
+    def encode_clips(self, x, video_names):
         # x -> [torch.Size([2, 2, 3, 8, 224, 224]), torch.Size([2, 2, 3, 32, 224, 224])]
         assert isinstance(x, list) and len(x) >= 1
 
@@ -275,7 +275,7 @@ class ForecastingEncoderDecoder(nn.Module):
                 pathway_for_input.append(input_clip)
 
             # pathway_for_input -> [torch.Size([2, 3, 8, 224, 224]), torch.Size([2, 3,32, 224, 224])]
-            input_feature = self.backbone(pathway_for_input)
+            input_feature = self.backbone(pathway_for_input, video_names)
             features.append(input_feature)
 
         return features
@@ -290,14 +290,14 @@ class ForecastingEncoderDecoder(nn.Module):
     def decode_predictions(self, x, tgts):
         return self.decoder(x, tgts)
 
-    def forward(self, x, tgts=None):
-        features = self.encode_clips(x)
+    def forward(self, x, video_names, tgts=None):
+        features = self.encode_clips(x, video_names)
         x = self.aggregate_clip_features(features)
         x = self.decode_predictions(x, tgts)
         return x
 
-    def generate(self, x, k=1):
-        x = self.forward(x)
+    def generate(self, x, video_idx, k=1):
+        x = self.forward(x, video_idx)
         results = []
         for head_x in x:
             if k > 1:

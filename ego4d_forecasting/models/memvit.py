@@ -173,7 +173,7 @@ class MeMViT(nn.Module):
 
         for i in range(depth):
             num_heads = round_width(num_heads, head_mul[i])
-
+            # embed_dim = round_width(embed_dim, dim_mul[i], divisor=num_heads)
             if cfg.MVIT.DIM_MUL_IN_ATT:
                 dim_out = round_width(
                     embed_dim,
@@ -320,13 +320,24 @@ class MeMViT(nn.Module):
         return names
 
     def forward(self, x, video_names=None, bboxes=None):
-        x = x[0]
+        # just the slow branch
+        if len(x) > 1:
+            if x[0].shape[2] == 16:
+                x = x[0]
+            else:
+                downsample = x[1].shape[2] // 16
+                assert x[1].shape[2] % 16 == 0
+                x = x[1][:, :, ::downsample, :, :]
+        else:
+            assert x[0].shape[2] == 16
+
         H = x.shape[3] // self.patch_stride[1]
 
         x = self.patch_embed(x)
 
         T = self.cfg.DATA.NUM_FRAMES // self.patch_stride[0]
         W = x.shape[1] // H // T
+        # W = self.cfg.DATA.TRAIN_CROP_SIZE // self.patch_stride[2]
         B, N, C = x.shape
 
         if self.cls_embed_on:

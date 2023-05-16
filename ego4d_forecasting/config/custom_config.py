@@ -26,7 +26,7 @@ def add_custom_config(_C, CfgNode):
     _C.MEMVIT.COMPRESS.POOL_STRIDE = [2, 2, 2]
 
     # If True, make model causal (used in, e.g., anticipation tasks).
-    _C.MVIT.CAUSAL = False
+    _C.MVIT.CAUSAL = True
 
     _C.MVIT.BOX_DEPTH = 0
 

@@ -26,14 +26,13 @@ logger = logging.get_logger(__name__)
 from pytorchvideo.data.clip_sampling import ClipSampler, ClipInfo
 from typing import Dict, Any
 
+
 class CenterClipVideoSampler(ClipSampler):
     """
     Samples just a single clip from the center of the video (use for testing)
     """
 
-    def __init__(
-        self, clip_duration: float
-    ) -> None:
+    def __init__(self, clip_duration: float) -> None:
         super().__init__(clip_duration)
 
     def __call__(
@@ -71,9 +70,11 @@ class Ego4dRecognition(torch.utils.data.Dataset):
         ) / self.cfg.DATA.TARGET_FPS
         clip_sampler = make_clip_sampler(clip_sampler_type, clip_duration)
 
-        mode_ = 'test_unannotated' if mode=='test' else mode
-        data_path = os.path.join(self.cfg.DATA.PATH_TO_DATA_DIR, f'fho_lta_{mode_}.json')
-        
+        mode_ = "test_unannotated" if mode == "test" else mode
+        data_path = os.path.join(
+            self.cfg.DATA.PATH_TO_DATA_DIR, f"fho_lta_{mode_}.json"
+        )
+
         self.dataset = ptv_dataset_helper.clip_recognition_dataset(
             data_path=data_path,
             clip_sampler=clip_sampler,
@@ -98,7 +99,7 @@ class Ego4dRecognition(torch.utils.data.Dataset):
                     transform=Compose(
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
-                            Lambda(lambda x: x/255.0),
+                            Lambda(lambda x: x / 255.0),
                             Normalize(cfg.DATA.MEAN, cfg.DATA.STD),
                         ]
                         + video_transformer.random_scale_crop_flip(mode, cfg)
@@ -126,6 +127,7 @@ class Ego4dRecognition(torch.utils.data.Dataset):
 
 from .eval_sampler import DistributedEvalSampler
 
+
 @DATASET_REGISTRY.register()
 class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
     def __init__(self, cfg, mode):
@@ -139,7 +141,7 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
         sampler = RandomSampler
         if cfg.SOLVER.ACCELERATOR != "dp" and cfg.NUM_GPUS > 1:
             sampler = DistributedSampler
-        if mode == 'test':
+        if mode == "test":
             sampler = DistributedEvalSampler
 
         clip_sampler_type = "uniform" if mode == "test" else "random"
@@ -148,15 +150,16 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
         ) / self.cfg.DATA.TARGET_FPS
         clip_sampler = make_clip_sampler(clip_sampler_type, clip_duration)
 
-        if mode == 'test':
+        if mode == "test":
             clip_sampler = CenterClipVideoSampler(clip_duration)
 
-
-        mode_ = 'test_unannotated' if mode=='test' else mode
+        mode_ = "test_unannotated" if mode == "test" else mode
         # [!!]
-        if mode == 'test' and cfg.TEST.EVAL_VAL:
-            mode_ = 'val'
-        data_path = os.path.join(self.cfg.DATA.PATH_TO_DATA_DIR, f'fho_lta_{mode_}.json')
+        if mode == "test" and cfg.TEST.EVAL_VAL:
+            mode_ = "val"
+        data_path = os.path.join(
+            self.cfg.DATA.PATH_TO_DATA_DIR, f"fho_lta_{mode_}.json"
+        )
 
         self.dataset = ptv_dataset_helper.clip_forecasting_dataset(
             data_path=data_path,
@@ -218,7 +221,7 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
 
         # last visible annotated clip: (clip_uid + action_idx)
         def extract_clip_id(x):
-            last_clip = x['input_clips'][-1]
+            last_clip = x["input_clips"][-1]
             return f'{last_clip["clip_uid"]}_{last_clip["action_idx"]}'
 
         def extract_forecast_times(x):
@@ -236,13 +239,17 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
                             ReduceExpandInputClips(
                                 Compose(
                                     [
-                                        Lambda(lambda x: x/255.0),
-                                        Normalize(cfg.DATA.MEAN, cfg.DATA.STD)
+                                        Lambda(lambda x: x / 255.0),
+                                        Normalize(cfg.DATA.MEAN, cfg.DATA.STD),
                                     ]
                                     + video_transformer.random_scale_crop_flip(
                                         mode, cfg
                                     )
-                                    + [video_transformer.uniform_temporal_subsample_repeated(cfg)]
+                                    + [
+                                        video_transformer.uniform_temporal_subsample_repeated(
+                                            cfg
+                                        )
+                                    ]
                                 )
                             ),
                         ]
@@ -253,6 +260,7 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
                         x["video"],
                         extract_forecast_labels(x),
                         extract_observed_labels(x),
+                        x["video_name"],
                         extract_clip_id(x),
                         extract_forecast_times(x),
                     )
@@ -266,4 +274,3 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.dataset.num_videos
-

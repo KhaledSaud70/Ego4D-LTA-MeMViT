@@ -834,7 +834,7 @@ class MViT(nn.Module):
 
         return names
 
-    def forward(self, x):
+    def forward(self, x, video_names=None):
 
         # just the slow branch
         if len(x) > 1:

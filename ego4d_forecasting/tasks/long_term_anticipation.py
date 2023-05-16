@@ -151,24 +151,23 @@ class MultiTaskClassificationTask(VideoTask):
 
 
 class LongTermAnticipationTask(VideoTask):
-
     def __init__(self, cfg):
         super().__init__(cfg)
         self.checkpoint_metric = f"val_0_ED_{cfg.FORECASTING.NUM_ACTIONS_TO_PREDICT-1}"
 
-    def forward(self, inputs, tgts):
-        return self.model(inputs, tgts=tgts)
+    def forward(self, inputs, video_names, tgts):
+        return self.model(inputs, video_names=video_names, tgts=tgts)
 
     def training_step(self, batch, batch_idx):
         # Labels is tensor of shape (batch_size, time, label_dim)
-        input, labels, observed_labels, _, _ = batch
+        input, labels, observed_labels, video_names, _, _ = batch
 
         # Preds is a list of tensors of shape (B, Z, C), where
         # - B is batch size,
         # - Z is number of future predictions,
         # - C is the class
         # The list is for each label type (e.g. [<verb_tensor>, <noun_tensor>])
-        preds = self.forward(input, tgts=labels)
+        preds = self.forward(input, video_names, tgts=labels)
         assert len(preds) == len(self.cfg.MODEL.NUM_CLASSES), len(preds)
 
         loss = 0
@@ -212,9 +211,14 @@ class LongTermAnticipationTask(VideoTask):
             self.log(key, metric)
 
     def validation_step(self, batch, batch_idx):
-        input, forecast_labels, _, _, label_clip_times = (
-            batch
-        )  # forecast_labels: (B, Z, 1)
+        (
+            input,
+            forecast_labels,
+            _,
+            _,
+            video_names,
+            label_clip_times,
+        ) = batch  # forecast_labels: (B, Z, 1)
         k = self.cfg.FORECASTING.NUM_SEQUENCES_TO_PREDICT
 
         # Preds is a list of tensors of shape (B, K, Z), where
@@ -222,7 +226,7 @@ class LongTermAnticipationTask(VideoTask):
         # - K is number of predictions,
         # - Z is number of future predictions,
         # The list is for each label type (e.g. [<verb_tensor>, <noun_tensor>])
-        preds = self.model.generate(input, k=k)  # [(B, K, Z)]
+        preds = self.model.generate(input, video_names, k=k)  # [(B, K, Z)]
         step_result = {}
         for head_idx, pred in enumerate(preds):
             assert pred.shape[1] == k
@@ -232,9 +236,7 @@ class LongTermAnticipationTask(VideoTask):
 
             label = forecast_labels[:, :, head_idx : head_idx + 1]
             auedit = metrics.distributed_AUED(pred, label)
-            results = {
-                f"val_{head_idx}_" + k: v for k, v in auedit.items()
-            }
+            results = {f"val_{head_idx}_" + k: v for k, v in auedit.items()}
             step_result.update(results)
 
         return step_result
@@ -246,9 +248,14 @@ class LongTermAnticipationTask(VideoTask):
             self.log(key, metric)
 
     def test_step(self, batch, batch_idx):
-        input, forecast_labels, _, last_clip_ids, label_clip_times = (
-            batch
-        )  # forecast_labels: (B, Z, 1)
+        (
+            input,
+            forecast_labels,
+            _,
+            video_names,
+            last_clip_ids,
+            label_clip_times,
+        ) = batch  # forecast_labels: (B, Z, 1)
         k = self.cfg.FORECASTING.NUM_SEQUENCES_TO_PREDICT
 
         # Preds is a list of tensors of shape (B, K, Z), where
@@ -256,34 +263,32 @@ class LongTermAnticipationTask(VideoTask):
         # - K is number of predictions,
         # - Z is number of future predictions,
         # The list is for each label type (e.g. [<verb_tensor>, <noun_tensor>])
-        preds = self.model.generate(input, k=k)  # [(B, K, Z)]
-        
+        preds = self.model.generate(input, video_names, k=k)  # [(B, K, Z)]
+
         return {
-            'last_clip_ids': last_clip_ids,
-            'verb_preds': preds[0],
-            'noun_preds': preds[1],
+            "last_clip_ids": last_clip_ids,
+            "verb_preds": preds[0],
+            "noun_preds": preds[1],
         }
 
     def test_epoch_end(self, outputs):
 
         test_outputs = {}
-        for key in ['verb_preds', 'noun_preds']:
+        for key in ["verb_preds", "noun_preds"]:
             preds = torch.cat([x[key] for x in outputs], 0)
             preds = self.all_gather(preds).unbind()
             test_outputs[key] = torch.cat(preds, 0)
 
-        last_clip_ids = [x['last_clip_ids'] for x in outputs]
+        last_clip_ids = [x["last_clip_ids"] for x in outputs]
         last_clip_ids = [item for sublist in last_clip_ids for item in sublist]
         last_clip_ids = list(itertools.chain(*du.all_gather_unaligned(last_clip_ids)))
-        test_outputs['last_clip_ids'] = last_clip_ids
+        test_outputs["last_clip_ids"] = last_clip_ids
 
         if du.get_local_rank() == 0:
             pred_dict = {}
-            for idx in range(len(test_outputs['last_clip_ids'])):
-                pred_dict[test_outputs['last_clip_ids'][idx]] = {
-                    'verb': test_outputs['verb_preds'][idx].cpu().tolist(),
-                    'noun': test_outputs['noun_preds'][idx].cpu().tolist(),
-                }       
-            json.dump(pred_dict, open('outputs.json', 'w'))
-
-
+            for idx in range(len(test_outputs["last_clip_ids"])):
+                pred_dict[test_outputs["last_clip_ids"][idx]] = {
+                    "verb": test_outputs["verb_preds"][idx].cpu().tolist(),
+                    "noun": test_outputs["noun_preds"][idx].cpu().tolist(),
+                }
+            json.dump(pred_dict, open("outputs.json", "w"))

@@ -26,7 +26,7 @@ mkdir -p ${WORK_DIR}
 
 EGO4D_ANNOTS=$PWD/data/long_term_anticipation/annotations/
 EGO4D_VIDEOS=$PWD/data/long_term_anticipation/clips/
-CLUSTER_ARGS="--on_cluster NUM_GPUS 1"
+CLUSTER_ARGS="--on_cluster NUM_GPUS 8"
 
 # # SlowFast-Transformer
 # BACKBONE_WTS=$PWD/pretrained_models/long_term_anticipation/ego4d_slowfast8x8.ckpt
@@ -65,6 +65,6 @@ run memvit_concat \
     FORECASTING.DECODER MultiHeadDecoder \
     DATA.CHECKPOINT_MODULE_FILE_PATH ${BACKBONE_WTS}
 
-# # Debug locally using a smaller batch size / fewer GPUs
-# CLUSTER_ARGS="NUM_GPUS 2 TRAIN.BATCH_SIZE 8 TEST.BATCH_SIZE 32"
+# Debug locally using a smaller batch size / fewer GPUs
+CLUSTER_ARGS="NUM_GPUS 1 TRAIN.BATCH_SIZE 8 TEST.BATCH_SIZE 32"
 
