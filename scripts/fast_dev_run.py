@@ -217,14 +217,16 @@ def main(cfg):
         gpus=cfg.NUM_GPUS,
         num_nodes=cfg.NUM_SHARDS,
         accelerator=cfg.SOLVER.ACCELERATOR,
-        max_epochs=2,
+        max_epochs=cfg.SOLVER.MAX_EPOCH,
         num_sanity_val_steps=0,
         benchmark=True,
         log_gpu_memory="min_max",
         replace_sampler_ddp=False,
-        fast_dev_run=False,
+        fast_dev_run=cfg.FAST_DEV_RUN,
         default_root_dir=cfg.OUTPUT_DIR,
         plugins=DDPPlugin(find_unused_parameters=False),
+        limit_train_batches=0.0007,
+        limit_val_batches=0.0007,
         **args,
     )
 

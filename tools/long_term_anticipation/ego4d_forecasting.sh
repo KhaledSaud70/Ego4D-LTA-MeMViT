@@ -26,7 +26,7 @@ mkdir -p ${WORK_DIR}
 
 EGO4D_ANNOTS=$PWD/data/annotations/
 EGO4D_VIDEOS=$PWD/data/clips/
-CLUSTER_ARGS="--on_cluster NUM_GPUS 8"
+CLUSTER_ARGS="--on_cluster NUM_GPUS 2"
 
 # # SlowFast-Transformer
 # BACKBONE_WTS=$PWD/pretrained_models/long_term_anticipation/ego4d_slowfast8x8.ckpt
