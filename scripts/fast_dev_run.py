@@ -225,8 +225,6 @@ def main(cfg):
         fast_dev_run=cfg.FAST_DEV_RUN,
         default_root_dir=cfg.OUTPUT_DIR,
         plugins=DDPPlugin(find_unused_parameters=False),
-        limit_train_batches=0.0007,
-        limit_val_batches=0.0007,
         **args,
     )
 
