@@ -9,7 +9,7 @@ import torch
 from fvcore.nn.flop_count import flop_count
 from fvcore.nn.precise_bn import update_bn_stats
 
-from .import logging
+from . import logging
 from .batchnorm_helper import SubBatchNorm3d
 from .datasets_utils import pack_pathway_output
 
@@ -148,3 +148,7 @@ def calculate_and_update_precise_bn(loader, model, num_iters=200):
 
     # Update the bn stats.
     update_bn_stats(model, _gen_loader(), num_iters)
+
+
+def clear_memory(model, cfg):
+    model.backbone.clear_memory()

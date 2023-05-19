@@ -173,7 +173,6 @@ class MeMViT(nn.Module):
 
         for i in range(depth):
             num_heads = round_width(num_heads, head_mul[i])
-            # embed_dim = round_width(embed_dim, dim_mul[i], divisor=num_heads)
             if cfg.MVIT.DIM_MUL_IN_ATT:
                 dim_out = round_width(
                     embed_dim,
@@ -337,7 +336,6 @@ class MeMViT(nn.Module):
 
         T = self.cfg.DATA.NUM_FRAMES // self.patch_stride[0]
         W = x.shape[1] // H // T
-        # W = self.cfg.DATA.TRAIN_CROP_SIZE // self.patch_stride[2]
         B, N, C = x.shape
 
         if self.cls_embed_on:
@@ -374,7 +372,7 @@ class MeMViT(nn.Module):
                 [] if blk_idx in self.cfg.MEMVIT.EXCLUDE_LAYERS else mem_selections
             )
             x, thw = blk(x, thw, cur_selection, video_names)
-
+        # print("INFO: X AFTER BLK:", x.shape)
         x = self.norm(x)
 
         if self.cfg.MVIT.FRAME_LEVEL:
@@ -387,7 +385,7 @@ class MeMViT(nn.Module):
                 x = x[:, 0]
             else:
                 x = x.mean(1)
-
+        # print("INFO: X BEFORE HEAD:", x.shape)
         x = self.head(x)
         return x
 

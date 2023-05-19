@@ -949,8 +949,15 @@ def mask_memory(cached_mem, cached_video_names, cur_video_names, mem_selections)
     """
     Masking memory so that one video cannot attend to memory of a different video.
     """
-    # print("[INFO]: ", "cached_video_names: {}".format(len(cached_video_names)))
-    # print("[INFO]: ", "cur_video_names: {}".format(len(cur_video_names)))
+    # print(
+    #     "[INFO]: ",
+    #     "cached_video_names: {}".format(len(cached_video_names)),
+    # )
+    # print(
+    #     "[INFO]: ",
+    #     "cur_video_names: {}".format(len(cur_video_names)),
+    # )
+
     assert len(cached_mem) == len(cached_video_names)
     kept_ts = []
     for t, (cached_mem_t, cached_video_names_t) in enumerate(

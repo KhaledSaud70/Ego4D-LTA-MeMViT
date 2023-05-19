@@ -260,9 +260,9 @@ class Ego4dLongTermAnticipation(torch.utils.data.Dataset):
                         x["video"],
                         extract_forecast_labels(x),
                         extract_observed_labels(x),
-                        x["video_name"],
                         extract_clip_id(x),
                         extract_forecast_times(x),
+                        x["video_index"],
                     )
                 ),
             ]

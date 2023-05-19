@@ -160,7 +160,7 @@ class LongTermAnticipationTask(VideoTask):
 
     def training_step(self, batch, batch_idx):
         # Labels is tensor of shape (batch_size, time, label_dim)
-        input, labels, observed_labels, video_names, _, _ = batch
+        input, labels, observed_labels, _, _, video_names = batch
 
         # Preds is a list of tensors of shape (B, Z, C), where
         # - B is batch size,
@@ -199,6 +199,9 @@ class LongTermAnticipationTask(VideoTask):
         return step_result
 
     def training_epoch_end(self, outputs):
+        if self.cfg.MEMVIT.ENABLE:
+            misc.clear_memory(self.model, self.cfg)
+
         if self.cfg.BN.USE_PRECISE_STATS and len(get_bn_modules(self.model)) > 0:
             misc.calculate_and_update_precise_bn(
                 self.train_loader, self.model, self.cfg.BN.NUM_BATCHES_PRECISE
@@ -216,8 +219,8 @@ class LongTermAnticipationTask(VideoTask):
             forecast_labels,
             _,
             _,
-            video_names,
             label_clip_times,
+            video_names,
         ) = batch  # forecast_labels: (B, Z, 1)
         k = self.cfg.FORECASTING.NUM_SEQUENCES_TO_PREDICT
 
@@ -252,9 +255,9 @@ class LongTermAnticipationTask(VideoTask):
             input,
             forecast_labels,
             _,
-            video_names,
             last_clip_ids,
             label_clip_times,
+            video_names,
         ) = batch  # forecast_labels: (B, Z, 1)
         k = self.cfg.FORECASTING.NUM_SEQUENCES_TO_PREDICT
 
