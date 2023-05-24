@@ -214,11 +214,11 @@ def main(cfg):
         args = {"logger": False, "callbacks": checkpoint_callback}
 
     trainer = Trainer(
-        # gpus=cfg.NUM_GPUS,
-        # num_nodes=cfg.NUM_SHARDS,
+        gpus=cfg.NUM_GPUS,
+        num_nodes=cfg.NUM_SHARDS,
         accelerator=cfg.SOLVER.ACCELERATOR,
         max_epochs=cfg.SOLVER.MAX_EPOCH,
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=3,
         benchmark=True,
         log_gpu_memory="min_max",
         replace_sampler_ddp=False,

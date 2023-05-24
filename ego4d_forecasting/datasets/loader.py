@@ -114,7 +114,7 @@ def construct_loader(cfg, split):
         batch_size=batch_size,
         shuffle=(False if sampler else shuffle),
         sampler=sampler,
-        # num_workers=cfg.DATA_LOADER.NUM_WORKERS,
+        num_workers=cfg.DATA_LOADER.NUM_WORKERS,
         pin_memory=cfg.DATA_LOADER.PIN_MEMORY,
         drop_last=drop_last,
         collate_fn=get_collate(cfg.DATA.TASK),
@@ -130,9 +130,7 @@ def sta_collate(batch):
     Returns:
         (tuple): collated detection data batch.
     """
-    eids, inputs, pred_boxes, verb_labels, ttc_targets, _extra_data = zip(
-        *batch
-    )
+    eids, inputs, pred_boxes, verb_labels, ttc_targets, _extra_data = zip(*batch)
 
     eids = default_collate(eids)
     inputs = default_collate(inputs)

@@ -17,11 +17,6 @@ from torch.nn.init import trunc_normal_
 from . import stem_helper
 from .build import MODEL_REGISTRY
 
-# try:
-#     from fairscale.nn.checkpoint import checkpoint_wrapper
-# except ImportError:
-#     checkpoint_wrapper = None
-
 
 @MODEL_REGISTRY.register()
 class MeMViT(nn.Module):
@@ -372,7 +367,7 @@ class MeMViT(nn.Module):
                 [] if blk_idx in self.cfg.MEMVIT.EXCLUDE_LAYERS else mem_selections
             )
             x, thw = blk(x, thw, cur_selection, video_names)
-        # print("INFO: X AFTER BLK:", x.shape)
+
         x = self.norm(x)
 
         if self.cfg.MVIT.FRAME_LEVEL:
@@ -385,7 +380,7 @@ class MeMViT(nn.Module):
                 x = x[:, 0]
             else:
                 x = x.mean(1)
-        # print("INFO: X BEFORE HEAD:", x.shape)
+
         x = self.head(x)
         return x
 
