@@ -6,10 +6,6 @@
 
 This repository contains code for long-term action anticipation on the Ego4D dataset using a Memory-Augmented Multiscale Vision Transformer (MeMViT) architecture. This work builds upon the [original Ego4D baseline implementation](https://github.com/EGO4D/forecasting/blob/main/LONG_TERM_ANTICIPATION.md) with modifications to incorporate memory-augmented features in the vision transformer backbone.
 
-## Acknowledgments
-
-This implementation is based on the original Ego4D long-term anticipation baseline. We extend our gratitude to the Ego4D team for providing the foundation for this work. The data preparation, training pipeline, and evaluation scripts remain largely unchanged from the original implementation.
-
 ## Model Architecture
 
 Our main contribution is the modification of the baseline model to include:
@@ -77,3 +73,7 @@ Model predictions on the test set can be generated using the following script:
 # Generate model predictions (outputs.json)
 bash tools/long_term_anticipation/evaluate_forecasting.sh output/
 ```
+
+## Acknowledgments
+
+This implementation is based on the original Ego4D long-term anticipation baseline. We extend our gratitude to the Ego4D team for providing the foundation for this work. The data preparation, training pipeline, and evaluation scripts remain largely unchanged from the original implementation.
