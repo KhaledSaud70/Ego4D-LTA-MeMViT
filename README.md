@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/LTA.png" alt="Logo" > <br>
+</p>
+
 # Long-Term Action Anticipation with Memory-Augmented MViT
 
 This repository contains code for long-term action anticipation on the Ego4D dataset using a Memory-Augmented Multiscale Vision Transformer (MeMViT) architecture. This work builds upon the [original Ego4D baseline implementation](https://github.com/EGO4D/forecasting/blob/main/LONG_TERM_ANTICIPATION.md) with modifications to incorporate memory-augmented features in the vision transformer backbone.
